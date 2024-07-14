@@ -33,11 +33,13 @@ final_df = pd.read_csv("data/ura_mcycle_parking.csv")
 final_df['destination'] = final_df['destination'].apply(ast.literal_eval)
 
 if len(format_number(postal_code)) == 6:
-  url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={postal_code}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
+  postal_code_input = format_number(postal_code)
+  url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={postal_code_input}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
   headers={}
   response = requests.request("GET", url)
 
   if response.json()['found'] > 0:
+    print(response.json())
     coord = (float(response.json()['results'][0]['LATITUDE']), float(response.json()['results'][0]['LONGITUDE']))
     x1 = inverse_haversine(coord, distance, top)[0]
     x0 = inverse_haversine(coord, distance, bottom)[0]
