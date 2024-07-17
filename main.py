@@ -18,9 +18,44 @@ def format_number(number):
 st.set_page_config(layout="wide")
 st.title('Park Toh Loh')
 
+# SEARCH ADDRESS FUNCTION
+
+selected_postal = None
+
+address = st.text_input("Address", value="", placeholder="Search address...")
+
+# search address details using OneMap API
+if address != "":
+  url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={address}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
+  headers={}
+  response = requests.request("GET", url)
+
+  # if there are results, parse into a dataframe
+  if response.json()['found'] > 0:
+    search_results = response.json()['results']
+    location_df = pd.DataFrame(search_results)
+    cols = ['SEARCHVAL','POSTAL','BLK_NO','ROAD_NAME','BUILDING','ADDRESS']
+
+    # allow single selection to use the corresponding selected postal code
+    event = st.dataframe(location_df[cols], on_select="rerun", selection_mode="single-row", use_container_width=True, hide_index=True)
+    
+    if len(event.selection['rows']) != 0:
+      selected_idx = event.selection['rows'][0]
+
+      selected_postal = location_df.iloc[selected_idx]['POSTAL']
+       
+# SEARCH PARKING FUNCTION
+
+default_postal = None
+
+# if there are selected postal code from search address function, use the postal code
+if selected_postal:
+  postal_code_input = selected_postal
+  default_postal = int(selected_postal)
+
 # USER PARAMETERS
-distance = st.slider("Distance (in meters)", min_value=0, max_value=2000, value=250, step=50) / 1000
-postal_code = st.number_input("Postal Code", min_value=None, max_value=None, value=None, step=1,format='%06d',placeholder="Enter postal code...")
+distance = st.slider("Distance (in meters)", min_value=0, max_value=2000, value=500, step=50) / 1000
+postal_code = st.number_input("Postal Code", min_value=None, max_value=None, value=default_postal, step=1,format='%06d',placeholder="Enter postal code...")
 
 top = pi * 0
 bottom = pi * 1
@@ -32,6 +67,8 @@ final_df = pd.read_csv("data/ura_mcycle_parking.csv")
 # convert from string to tuple
 final_df['destination'] = final_df['destination'].apply(ast.literal_eval)
 
+postal_code_input = None
+
 if len(format_number(postal_code)) == 6:
   postal_code_input = format_number(postal_code)
   url = f"https://www.onemap.gov.sg/api/common/elastic/search?searchVal={postal_code_input}&returnGeom=Y&getAddrDetails=Y&pageNum=1"
@@ -39,7 +76,7 @@ if len(format_number(postal_code)) == 6:
   response = requests.request("GET", url)
 
   if response.json()['found'] > 0:
-    print(response.json())
+    #print(response.json())
     coord = (float(response.json()['results'][0]['LATITUDE']), float(response.json()['results'][0]['LONGITUDE']))
     x1 = inverse_haversine(coord, distance, top)[0]
     x0 = inverse_haversine(coord, distance, bottom)[0]
