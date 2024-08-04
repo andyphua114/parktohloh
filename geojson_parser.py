@@ -6,7 +6,7 @@ def combine_coord(df):
     return (df['x'],df['y'])
 
 def geojson_parser():
-    with open("URAParkingLotGEOJSON.geojson") as f:
+    with open("data/URAParkingLotGEOJSON.geojson") as f:
         data = json.load(f)
 
     data_features = data['features']
@@ -50,21 +50,22 @@ def geojson_parser():
 
     # combine the lat/lon coord into one tuple
     df['destination'] = df.apply(combine_coord, axis = 1)
+    print(df['type_value'].unique())
 
-    # only keep the mcycle parking lot; TBC future expand to car
-    mc_df = df[df['type_value'] == 'MYCYCLE LOTS'].copy()
+    # omit 'LORRY LOTS' 'TRAILER LOTS'
+    car_mc_df = df[((df['type_value'] == 'MYCYCLE LOTS') | (df['type_value'] == 'CAR LOTS'))].copy()
 
     # get the numer of parking lots per location
-    mc_df_cnt = mc_df.groupby(['pp_code','parking_pl_value'])['lot_value'].agg('count').reset_index().rename({'lot_value':'no_of_lots'}, axis = 1)
+    car_mc_df_cnt = car_mc_df.groupby(['pp_code','parking_pl_value'])['lot_value'].agg('count').reset_index().rename({'lot_value':'no_of_lots'}, axis = 1)
 
-    # since lat/lon is for each and every parking lot, we just take the one wiht min coord as reference
-    min_x_mc_df = mc_df.groupby(['pp_code','parking_pl_value'])['x'].agg('min').reset_index()
+    # since lat/lon is for each and every parking lot, we just take the one with min coord as reference
+    min_x_car_mc_df = car_mc_df.groupby(['pp_code','parking_pl_value'])['x'].agg('min').reset_index()
 
-    temp_df = mc_df.merge(min_x_mc_df, how='inner', on=['pp_code','parking_pl_value', 'x'])
+    temp_df = car_mc_df.merge(min_x_car_mc_df, how='inner', on=['pp_code','parking_pl_value', 'x'])
 
-    final_df = temp_df.merge(mc_df_cnt, how='inner', on=['pp_code','parking_pl_value']).drop(['lot_value'], axis = 1)
+    final_df = temp_df.merge(car_mc_df_cnt, how='inner', on=['pp_code','parking_pl_value']).drop(['lot_value'], axis = 1)
 
-    final_df.to_csv("ura_mcycle_parking.csv", index=False)
+    final_df.to_csv("data/ura_car_mcycle_parking.csv", index=False)
 
 if __name__ == "__main__":
     geojson_parser()

@@ -18,6 +18,11 @@ def format_number(number):
 st.set_page_config(layout="wide")
 st.title('Park Toh Loh')
 
+# SELECT TYPE RADIO BUTTON
+
+veh_type = st.radio("Select vehicle type",
+                    ["All", "Car", "Motorcycle"])
+
 # SEARCH ADDRESS FUNCTION
 
 selected_postal = None
@@ -62,7 +67,15 @@ bottom = pi * 1
 right = pi * 0.5
 left = pi * 1.5
 
-final_df = pd.read_csv("data/ura_mcycle_parking.csv")
+loaded_df = pd.read_csv("data/ura_car_mcycle_parking.csv")
+
+# filter df based on veh type selection
+if veh_type == 'Motorcycle':
+  final_df = loaded_df[loaded_df['type_value'] == 'MYCYCLE LOTS'].copy()
+elif veh_type == 'Car':
+  final_df = loaded_df[loaded_df['type_value'] == 'CAR LOTS'].copy()
+else:
+  final_df = loaded_df.copy()
 
 # convert from string to tuple
 final_df['destination'] = final_df['destination'].apply(ast.literal_eval)
